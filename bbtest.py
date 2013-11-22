@@ -3,7 +3,7 @@
 import sys
 import subprocess as S
 
-
+DEFAULT_TEST_TIME = 10
 
 class error(Exception):
     pass
@@ -135,23 +135,39 @@ class TestPortMatch(unittest.TestSuite):
         assert port_range == (50000, 50050)
 
 
-
-def main(argv=sys.argv):
-    host1 = BBNode(None, listen_ports=False)
-    host2 = BBNode('jasmin-xfer1-dev.ceda.ac.uk', listen_ports=(50000, 50100))
-
+def network_test(host1, host2, timeout=DEFAULT_TEST_TIME, streams=1):
     port_range, is_reverse_proto = match_ports(host1, host2)
-    timeout = 20
     
-    args = ['-P', '1', '-t', str(timeout)]
+    args = ['-P', '2', '-t', str(timeout), '-s', str(streams)]
     if port_range:
-        args += ['--port %d:%d' % port_range]
+        args += ['--port', '%d:%d' % port_range]
+    if is_reverse_proto:
+        args += ['-z']
 
     srcspec = host1.pathspec('/dev/zero')
     snkspec = host2.pathspec('/dev/null')
 
     cmd = ['bbcp'] + args + [srcspec, snkspec]
     print ' '.join(cmd)
+
+    p = S.Popen(cmd, stdin=None, stdout=S.PIPE, stderr=S.STDOUT)
+    stdout = p.stdout.read()
+
+    return stdout
+
+def main(argv=sys.argv):
+
+    target, = argv[1:]
+
+    host1 = BBNode(None, listen_ports=False)
+    host2 = BBNode(target, listen_ports=(50000, 50100))
+
+    print '==='
+    print network_test(host1, host2)
+    print '==='
+    print network_test(host2, host1)
+    print '==='
+
 
 
 if __name__ == '__main__':
