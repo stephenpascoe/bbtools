@@ -155,6 +155,10 @@ def network_test(host1, host2, timeout=DEFAULT_TEST_TIME, streams=1):
 
     return stdout
 
+
+def bdp(bandwidth, delay):
+    return float(bandwidth) / 8 * delay
+
 def main(argv=sys.argv):
 
     target, = argv[1:]
