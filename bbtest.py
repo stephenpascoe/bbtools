@@ -2,8 +2,13 @@
 
 import sys
 import subprocess as S
+import re
+import datetime as DT
 
 DEFAULT_TEST_TIME = 10
+PROGRESS_REXP = re.compile(r'bbcp: '
+                           r'(?P<pid>\d+)\s+(?P<hour>\d+):(?P<minute>\d+):(?P<second>\d+)'
+                           r'\s+(?P<pcdone>\d+)% done; (?P<bps>[0-9.]+) (?P<unit>.*)/s')
 
 class error(Exception):
     pass
@@ -33,6 +38,8 @@ class BBNode(object):
         else:
             idstr = ''
         return '%s%s:%s' % (idstr, self.hostname, path)
+
+    #!TODO: configurable path to bbcp executable
 
 
 def match_ports(src_node, snk_node):
@@ -151,10 +158,33 @@ def network_test(host1, host2, timeout=DEFAULT_TEST_TIME, streams=1):
     print ' '.join(cmd)
 
     p = S.Popen(cmd, stdin=None, stdout=S.PIPE, stderr=S.STDOUT)
-    stdout = p.stdout.read()
+    for dt, mbps in parse_progress(p.stdout):
+        print '%s %s' % (dt, mbps)
 
-    return stdout
+def parse_progress(progress_fh):
+    #!TODO: parse stream of progress lines
+    now = DT.datetime.now()
+    for line in progress_fh:
+        m = PROGRESS_REXP.match(line)
+        if m:
+            d = m.groupdict()
+            dt = DT.datetime(now.year, now.month, now.day,
+                             int(d['hour']),
+                             int(d['minute']),
+                             int(d['second']),
+                             )
+            # Normalise units to MB
+            
+            if d['unit'] == 'MB':
+                mbps = float(d['bps'])
+            elif d['unit'] == 'KB':
+                mbps = float(d['bps']) * 2**10
+            elif d['unit'] == 'GB':
+                mbps = float(d['bps']) / 2**10
+            else:
+                raise Exception('Unknown bandwith unit %s' % d['unit'])
 
+            yield (dt, mbps)
 
 def bdp(bandwidth, delay):
     return float(bandwidth) / 8 * delay
@@ -167,9 +197,9 @@ def main(argv=sys.argv):
     host2 = BBNode(target, listen_ports=(50000, 50100))
 
     print '==='
-    print network_test(host1, host2)
+    network_test(host1, host2)
     print '==='
-    print network_test(host2, host1)
+    network_test(host2, host1)
     print '==='
 
 
