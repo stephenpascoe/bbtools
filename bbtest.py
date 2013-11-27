@@ -10,6 +10,7 @@ DEFAULT_TEST_TIME = 10
 PROGRESS_REXP = re.compile(r'bbcp: '
                            r'(?P<pid>\d+)\s+(?P<hour>\d+):(?P<minute>\d+):(?P<second>\d+)'
                            r'\s+(?P<pcdone>\d+)% done; (?P<bps>[0-9.]+) (?P<unit>.*)/s')
+TEST_STREAMS = [1, 8, 16, 24, 32]
 
 class error(Exception):
     pass
@@ -200,7 +201,7 @@ def main(argv=sys.argv):
     results = {}
 
     print '=========== Network Only Tests =============='
-    for streams in [1, 8, 16, 24, 32]:
+    for streams in TEST_STREAMS:
         print '=== local --> target; streams = %d' % streams
 
         e = results[('out', streams)] = []
@@ -209,7 +210,7 @@ def main(argv=sys.argv):
             e.append((dt, mbps))
 
         
-    for streams in [1, 8, 16, 24, 32]:
+    for streams in TEST_STREAMS:
         print '=== local <-- target; streams = %d' % streams
         e = results[('in', streams)] = []
         for dt, mbps in network_test(host2, host1, streams=streams):
@@ -220,7 +221,7 @@ def main(argv=sys.argv):
     
     # Save results
     with open(results_file, 'w') as fh:
-        cPickle.dump(results)
+        cPickle.dump(results, fh)
     print 'Saved results pickle to %s' % results_file
 
 
