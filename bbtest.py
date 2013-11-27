@@ -196,11 +196,14 @@ def main(argv=sys.argv):
     host1 = BBNode(None, listen_ports=False)
     host2 = BBNode(target, listen_ports=(50000, 50100))
 
-    print '==='
-    network_test(host1, host2)
-    print '==='
-    network_test(host2, host1)
-    print '==='
+    print '=========== Network Only Tests =============='
+    for streams in [1, 4, 8, 16, 32]:
+        print '=== local --> target; streams = %d' % streams
+        network_test(host1, host2, streams=streams)
+    for streams in [1, 4, 8, 16, 32]:
+        print '=== local <-- target; streams = %d' % streams
+        network_test(host2, host1, streams=streams)
+    print '============================================='
 
 
 
