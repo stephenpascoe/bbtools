@@ -180,9 +180,9 @@ def parse_progress(progress_fh):
             if d['unit'] == 'MB':
                 mbps = float(d['bps'])
             elif d['unit'] == 'KB':
-                mbps = float(d['bps']) * 2**10
-            elif d['unit'] == 'GB':
                 mbps = float(d['bps']) / 2**10
+            elif d['unit'] == 'GB':
+                mbps = float(d['bps']) * 2**10
             else:
                 raise Exception('Unknown bandwith unit %s' % d['unit'])
 
