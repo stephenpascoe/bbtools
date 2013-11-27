@@ -4,6 +4,7 @@ import sys
 import subprocess as S
 import re
 import datetime as DT
+import cPickle
 
 DEFAULT_TEST_TIME = 10
 PROGRESS_REXP = re.compile(r'bbcp: '
@@ -158,8 +159,8 @@ def network_test(host1, host2, timeout=DEFAULT_TEST_TIME, streams=1):
     print ' '.join(cmd)
 
     p = S.Popen(cmd, stdin=None, stdout=S.PIPE, stderr=S.STDOUT)
-    for dt, mbps in parse_progress(p.stdout):
-        print '%s %s' % (dt, mbps)
+
+    return parse_progress(p.stdout)
 
 def parse_progress(progress_fh):
     #!TODO: parse stream of progress lines
@@ -191,20 +192,36 @@ def bdp(bandwidth, delay):
 
 def main(argv=sys.argv):
 
-    target, = argv[1:]
+    target, results_file = argv[1:]
 
     host1 = BBNode(None, listen_ports=False)
     host2 = BBNode(target, listen_ports=(50000, 50100))
 
-    print '=========== Network Only Tests =============='
-    for streams in [1, 4, 8, 16, 32]:
-        print '=== local --> target; streams = %d' % streams
-        network_test(host1, host2, streams=streams)
-    for streams in [1, 4, 8, 16, 32]:
-        print '=== local <-- target; streams = %d' % streams
-        network_test(host2, host1, streams=streams)
-    print '============================================='
+    results = {}
 
+    print '=========== Network Only Tests =============='
+    for streams in [1, 8, 16, 24, 32]:
+        print '=== local --> target; streams = %d' % streams
+
+        e = results[('out', streams)] = []
+        for dt, mbps in network_test(host1, host2, streams=streams):
+            print '%s %s' % (dt, mbps)
+            e.append((dt, mbps))
+
+        
+    for streams in [1, 8, 16, 24, 32]:
+        print '=== local <-- target; streams = %d' % streams
+        e = results[('in', streams)] = []
+        for dt, mbps in network_test(host2, host1, streams=streams):
+            print '%s %s' % (dt, mbps)
+            e.append((dt, mbps))
+        
+    print '============================================='
+    
+    # Save results
+    with open(results_file, 'w') as fh:
+        cPickle.dump(results)
+    print 'Saved results pickle to %s' % results_file
 
 
 if __name__ == '__main__':
